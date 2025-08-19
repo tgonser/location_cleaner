@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Location Data Processor - Web Diagnostics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .upload-section {
+            padding: 30px;
+            border-right: 1px solid #eee;
+        }
+
+        .diagnostics-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 3px solid #4facfe;
+            padding-bottom: 10px;
+        }
+
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .file-input {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            display: block;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .process-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .process-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .process-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
+        }
+
+        .diagnostics-panel {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            scroll-behavior: smooth;
+        }
+
+        .diagnostics-header {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+        }
+
+        .diagnostics-content {
+            padding: 15px;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            border-left: 3px solid transparent;
+            animation: slideIn 0.2s ease;
+            font-size: 0.8em;
+            line-height: 1.3;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-entry.INFO {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+            color: #1565c0;
+        }
+
+        .log-entry.WARNING {
+            background: #fff3e0;
+            border-left-color: #ff9800;
+            color: #ef6c00;
+        }
+
+        .log-entry.ERROR {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+
+        .log-timestamp {
+            opacity: 0.6;
+            font-size: 0.75em;
+            margin-right: 8px;
+            color: #666;
+        }
+
+        .results-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+            text-align: center;
+        }
+
+        .results-section h3 {
+            margin-bottom: 15px;
+            color: #28a745;
+            font-size: 1.2em;
+        }
+
+        .download-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #4facfe;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.75em;
+            margin-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ready-message {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 40px;
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .upload-section {
+                border-right: none;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Location Data Processor</h1>
+            <p>Real-time Web Diagnostics & Analysis</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h2 class="section-title">📂 Upload & Process</h2>
+                
+                <form id="uploadForm" class="upload-form">
+                    <div class="form-group">
+                        <label>📄 Select JSON File:</label>
+                        <div class="file-input">
+                            <input type="file" id="fileInput" accept=".json" required>
+                            <label for="fileInput" class="file-input-label">
+                                <span id="fileLabel">Choose Location Data File...</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>📅 From Date:</label>
+                            <input type="date" id="fromDate" name="from_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>📅 To Date:</label>
+                            <input type="date" id="toDate" name="to_date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>📏 Distance Threshold (meters):</label>
+                            <input type="number" name="distance_threshold" value="200" min="0" step="50">
+                        </div>
+                        <div class="form-group">
+                            <label>⏱️ Duration Threshold (seconds):</label>
+                            <input type="number" name="duration_threshold" value="600" min="0" step="60">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>🎯 Probability Threshold:</label>
+                            <input type="number" name="probability_threshold" value="0.1" min="0" max="1" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>🚗 Speed Threshold (km/h):</label>
+                            <input type="number" name="speed_threshold_kmh" value="120" min="0" step="10">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="process-btn" id="processBtn">
+                        🚀 Start Processing
+                    </button>
+                </form>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Initializing...</div>
+                </div>
+
+                <div class="results-section" id="resultsSection">
+                    <h3>✅ Processing Complete!</h3>
+                    <button class="download-btn" id="downloadBtn">📥 Download Results</button>
+                </div>
+            </div>
+
+            <!-- Diagnostics Section -->
+            <div class="diagnostics-section">
+                <h2 class="section-title">🔍 Real-time Diagnostics</h2>
+                
+                <div class="diagnostics-panel">
+                    <div class="diagnostics-header">
+                        📊 Live Processing Log
+                    </div>
+                    <div class="diagnostics-content" id="diagnosticsContent">
+                        <div class="ready-message">
+                            Ready to process - upload a file and click process!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTaskId = null;
+        let pollInterval = null;
+
+        // File input handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || 'Choose Location Data File...';
+            document.getElementById('fileLabel').textContent = fileName;
+        });
+
+        // Form submission
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Check if file is selected
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                addLogEntry('ERROR', '❌ Please select a file first');
+                return;
+            }
+            
+            // Create FormData and explicitly add the file
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            // Add all other form fields
+            const formElements = this.elements;
+            for (let i = 0; i < formElements.length; i++) {
+                const element = formElements[i];
+                if (element.name && element.type !== 'file' && element.type !== 'submit') {
+                    formData.append(element.name, element.value);
+                }
+            }
+            
+            const processBtn = document.getElementById('processBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const resultsSection = document.getElementById('resultsSection');
+            
+            // Reset UI
+            processBtn.disabled = true;
+            processBtn.textContent = '⏳ Processing...';
+            progressContainer.style.display = 'block';
+            resultsSection.style.display = 'none';
+            
+            // Clear diagnostics
+            const diagnosticsContent = document.getElementById('diagnosticsContent');
+            diagnosticsContent.innerHTML = '<div class="log-entry INFO"><span class="log-timestamp">' + 
+                new Date().toLocaleTimeString() + '</span>🚀 Starting processing...</div>';
+            
+            try {
+                addLogEntry('INFO', '📤 Uploading file: ' + fileInput.files[0].name);
+                
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.task_id) {
+                    currentTaskId = result.task_id;
+                    addLogEntry('INFO', '✅ Upload successful, starting processing...');
+                    startPolling();
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                addLogEntry('ERROR', '❌ Upload failed: ' + error.message);
+                resetUI();
+            }
+        });
+
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            
+            pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/progress/${currentTaskId}`);
+                    const progress = await response.json();
+                    
+                    updateProgress(progress);
+                    
+                    // Update diagnostics
+                    if (progress.diagnostics && progress.diagnostics.length > 0) {
+                        updateDiagnostics(progress.diagnostics);
+                    }
+                    
+                    if (progress.state === 'SUCCESS') {
+                        handleSuccess(progress.result);
+                        clearInterval(pollInterval);
+                    } else if (progress.state === 'FAILURE') {
+                        handleError(progress.message || 'Processing failed');
+                        clearInterval(pollInterval);
+                    }
+                    
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    clearInterval(pollInterval);
+                    resetUI();
+                }
+            }, 1000); // Poll every second
+        }
+
+        function updateProgress(progress) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            const percentage = progress.percentage || 0;
+            progressFill.style.width = percentage + '%';
+            progressText.textContent = progress.message || 'Processing...';
+        }
+
+        function updateDiagnostics(diagnostics) {
+            const diagnosticsContent = document.getElementById('diagnosticsContent');
+            
+            // Clear ready message if it exists
+            const readyMessage = diagnosticsContent.querySelector('.ready-message');
+            if (readyMessage) {
+                readyMessage.remove();
+            }
+            
+            // Only add NEW diagnostics to avoid duplicates
+            const currentEntries = diagnosticsContent.querySelectorAll('.log-entry').length;
+            const newDiagnostics = diagnostics.slice(currentEntries);
+            
+            newDiagnostics.forEach(diagnostic => {
+                addLogEntry(diagnostic.level, diagnostic.message, diagnostic.timestamp);
+            });
+            
+            // Force scroll to bottom with smooth behavior
+            setTimeout(() => {
+                diagnosticsContent.scrollTo({
+                    top: diagnosticsContent.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+        }
+
+        function addLogEntry(level, message, timestamp = null) {
+            const diagnosticsContent = document.getElementById('diagnosticsContent');
+            const time = timestamp || new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${level}`;
+            logEntry.innerHTML = `<span class="log-timestamp">${time}</span>${message}`;
+            
+            diagnosticsContent.appendChild(logEntry);
+            
+            // Force immediate scroll to bottom
+            diagnosticsContent.scrollTop = diagnosticsContent.scrollHeight;
+            
+            // Keep only last 100 entries to prevent memory issues
+            const entries = diagnosticsContent.querySelectorAll('.log-entry');
+            if (entries.length > 100) {
+                entries[0].remove();
+            }
+        }
+
+        function handleSuccess(result) {
+            const resultsSection = document.getElementById('resultsSection');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            // Show results
+            resultsSection.style.display = 'block';
+            
+            // Get date range for filename
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const filename = `location_data_${fromDate}_to_${toDate}.json`;
+            
+            // Setup download with proper filename
+            downloadBtn.onclick = () => {
+                // Use fetch to download with custom filename
+                fetch(`/download/${currentTaskId}`)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        
+                        // Log successful download
+                        addLogEntry('INFO', `📥 Downloaded: ${filename}`);
+                    })
+                    .catch(error => {
+                        console.error('Download failed:', error);
+                        addLogEntry('ERROR', '❌ Download failed: ' + error.message);
+                    });
+            };
+            
+            addLogEntry('INFO', '✅ Processing completed successfully!');
+            addLogEntry('INFO', `📥 Download ready: ${filename}`);
+            resetUI();
+        }
+
+        function handleError(errorMessage) {
+            addLogEntry('ERROR', '❌ ' + errorMessage);
+            resetUI();
+        }
+
+        function resetUI() {
+            const processBtn = document.getElementById('processBtn');
+            processBtn.disabled = false;
+            processBtn.textContent = '🚀 Start Processing';
+        }
+
+        // Set default dates (last year)
+        window.addEventListener('load', function() {
+            const now = new Date();
+            const lastYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+            
+            document.getElementById('fromDate').value = lastYear.toISOString().split('T')[0];
+            document.getElementById('toDate').value = now.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>

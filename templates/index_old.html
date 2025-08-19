@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Data Processor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .upload-area {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #0056b3;
+            background-color: #e3f2fd;
+        }
+        
+        .upload-area.dragover {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .settings-panel {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-panel {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0056b3, #004085);
+        }
+        
+        .status-icon {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+        
+        .processing {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .result-actions {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-lg">
+                    <div class="card-header text-center">
+                        <h2><i class="fas fa-map-marked-alt"></i> Location Data Processor</h2>
+                        <p class="mb-0">Clean and optimize your Google Location History data</p>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- File Upload Section -->
+                        <div class="upload-section">
+                            <h5><i class="fas fa-upload"></i> Upload Location History</h5>
+                            <div class="upload-area" id="uploadArea">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <h6>Drag & drop your location-history.json file here</h6>
+                                    <p class="text-muted">or click to browse</p>
+                                    <input type="file" id="fileInput" accept=".json" style="display: none;">
+                                </div>
+                            </div>
+                            
+                            <div id="fileInfo" class="mt-3" style="display: none;">
+                                <div class="alert alert-info alert-custom">
+                                    <i class="fas fa-file-alt"></i>
+                                    <strong>File selected:</strong> <span id="fileName"></span>
+                                    <span class="badge bg-secondary ms-2" id="fileSize"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Settings Panel -->
+                        <div class="settings-panel">
+                            <h5><i class="fas fa-cog"></i> Processing Settings</h5>
+                            <form id="settingsForm">
+                                <div class="form-grid">
+                                    <div class="mb-3">
+                                        <label class="form-label">From Date</label>
+                                        <input type="date" class="form-control" id="fromDate" name="from_date" value="2025-01-01">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">To Date</label>
+                                        <input type="date" class="form-control" id="toDate" name="to_date" value="2025-12-31">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Distance Threshold (meters)</label>
+                                        <input type="number" class="form-control" name="distance_threshold" value="200" min="0">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Max Speed (km/h)</label>
+                                        <input type="number" class="form-control" name="speed_threshold_kmh" value="120" min="0">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Probability Threshold</label>
+                                        <input type="number" class="form-control" name="probability_threshold" value="0.1" min="0" max="1" step="0.1">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Duration Threshold (seconds)</label>
+                                        <input type="number" class="form-control" name="duration_threshold" value="600" min="0">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">GPS Accuracy Filter (meters, 0=disabled)</label>
+                                        <input type="number" class="form-control" name="accuracy_threshold" value="0" min="0">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Outlier Detection (std multiplier)</label>
+                                        <input type="number" class="form-control" name="outlier_std_multiplier" value="3.0" min="0" step="0.1">
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg" id="processBtn" disabled>
+                                        <i class="fas fa-play"></i> Start Processing
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Progress Section -->
+                        <div class="progress-container" id="progressContainer">
+                            <h5><i class="fas fa-tasks"></i> Processing Progress</h5>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     id="progressBar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="alert alert-info alert-custom" id="statusMessage">
+                                <i class="fas fa-info-circle status-icon"></i>
+                                <span id="statusText">Initializing...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Results Section -->
+                        <div class="result-actions" id="resultActions">
+                            <div class="stats-panel" id="statsPanel">
+                                <h5><i class="fas fa-chart-bar"></i> Processing Statistics</h5>
+                                <div id="statsContent">
+                                    <!-- Stats will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <button class="btn btn-success btn-lg me-2" id="downloadBtn">
+                                    <i class="fas fa-download"></i> Download Processed Data
+                                </button>
+                                <button class="btn btn-outline-secondary" id="resetBtn">
+                                    <i class="fas fa-redo"></i> Process Another File
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Info Panel -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle"></i> How It Works</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-upload fa-2x text-primary"></i>
+                                    <h6 class="mt-2">1. Upload</h6>
+                                    <p class="small">Upload your Google Location History JSON file</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-filter fa-2x text-primary"></i>
+                                    <h6 class="mt-2">2. Filter</h6>
+                                    <p class="small">Apply filters to remove noise and outliers</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-download fa-2x text-primary"></i>
+                                    <h6 class="mt-2">3. Download</h6>
+                                    <p class="small">Get your cleaned, optimized location data</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning alert-custom mt-3">
+                            <i class="fas fa-shield-alt"></i>
+                            <strong>Privacy Note:</strong> All processing happens on the server. 
+                            Files are automatically deleted after processing. We do not store or access your location data.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentTaskId = null;
+        let progressInterval = null;
+        
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const processBtn = document.getElementById('processBtn');
+        
+        // Upload area click handler
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+        
+        // File input change handler
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+        
+        function handleFileSelect(file) {
+            if (!file.name.toLowerCase().endsWith('.json')) {
+                alert('Please select a JSON file.');
+                return;
+            }
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            processBtn.disabled = false;
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Form submission
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a file first.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            // Add form settings
+            const formElements = e.target.elements;
+            for (let element of formElements) {
+                if (element.name && element.value) {
+                    formData.append(element.name, element.value);
+                }
+            }
+            
+            try {
+                showProgress();
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentTaskId = result.task_id;
+                    startProgressPolling();
+                } else {
+                    showError(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        });
+        
+        function showProgress() {
+            document.getElementById('progressContainer').style.display = 'block';
+            processBtn.disabled = true;
+            updateStatus('Uploading file...', 0, 'processing');
+        }
+        
+        function startProgressPolling() {
+            progressInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/progress/${currentTaskId}`);
+                    const progress = await response.json();
+                    
+                    updateStatus(progress.message, progress.percentage || 0, progress.state.toLowerCase());
+                    
+                    if (progress.state === 'SUCCESS') {
+                        clearInterval(progressInterval);
+                        showResults(progress.result);
+                    } else if (progress.state === 'FAILURE') {
+                        clearInterval(progressInterval);
+                        showError(progress.message);
+                    }
+                } catch (error) {
+                    console.error('Progress polling error:', error);
+                }
+            }, 1000);
+        }
+        
+        function updateStatus(message, percentage, state) {
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('statusText');
+            const statusIcon = document.querySelector('.status-icon');
+            
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage ? Math.round(percentage) + '%' : '';
+            statusText.textContent = message;
+            
+            // Update icon based on state
+            statusIcon.className = 'status-icon ';
+            switch (state) {
+                case 'processing':
+                case 'progress':
+                    statusIcon.className += 'fas fa-spinner processing';
+                    break;
+                case 'success':
+                    statusIcon.className += 'fas fa-check-circle text-success';
+                    break;
+                case 'failure':
+                    statusIcon.className += 'fas fa-exclamation-triangle text-danger';
+                    break;
+                default:
+                    statusIcon.className += 'fas fa-info-circle';
+            }
+        }
+        
+        function showResults(result) {
+            updateStatus('Processing completed successfully!', 100, 'success');
+            
+            // Show statistics
+            const statsContent = document.getElementById('statsContent');
+            statsContent.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Total entries processed:</strong> ${result.stats.total_entries.toLocaleString()}<br>
+                        <strong>Activities retained:</strong> ${result.stats.activities_retained.toLocaleString()}<br>
+                        <strong>Visits retained:</strong> ${result.stats.visits_retained.toLocaleString()}<br>
+                        <strong>Position fixes:</strong> ${result.stats.position_fixes_retained.toLocaleString()}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Accuracy filtered:</strong> ${result.stats.accuracy_filtered.toLocaleString()}<br>
+                        <strong>Outliers removed:</strong> ${result.stats.outliers_removed.toLocaleString()}<br>
+                        <strong>Transportation modes:</strong> ${result.modes.length}<br>
+                        <strong>Processing efficiency:</strong> ${Math.round((result.stats.processed_entries / result.stats.total_entries) * 100)}%
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <strong>Detected modes:</strong> 
+                    <div class="mt-1">
+                        ${result.modes.map(mode => `<span class="badge bg-primary me-1">${mode}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('resultActions').style.display = 'block';
+        }
+        
+        function showError(message) {
+            updateStatus('Error: ' + message, 0, 'failure');
+            processBtn.disabled = false;
+        }
+        
+        // Download button handler
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (currentTaskId) {
+                window.location.href = `/download/${currentTaskId}`;
+                
+                // Clean up files after download
+                setTimeout(() => {
+                    fetch(`/cleanup/${currentTaskId}`, { method: 'POST' });
+                }, 2000);
+            }
+        });
+        
+        // Reset button handler
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            // Reset form
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'none';
+            document.getElementById('resultActions').style.display = 'none';
+            processBtn.disabled = true;
+            
+            // Clear progress interval
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            
+            currentTaskId = null;
+        });
+    </script>
+</body>
+</html>

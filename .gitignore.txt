@@ -1,0 +1,97 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+old stuff/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Environment variables and config files
+.env
+.env.local
+.env.production
+config.py
+config.json
+settings.py
+secrets.json
+credentials.json
+
+# API keys and sensitive data
+*api_key*
+*secret*
+*password*
+*credentials*
+*token*
+*.pem
+*.key
+*.crt
+
+# Application specific
+uploads/
+processed/
+temp/
+logs/
+*.log
+diagnostic.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Flask specific
+instance/
+.webassets-cache
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test files with real data
+test_data/
+sample_data/
+real_location_data/
+*_real.json
+*_actual.json
